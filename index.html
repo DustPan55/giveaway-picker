@@ -40,7 +40,7 @@
 
   /* brand header */
   .brand{display:flex; flex-direction:column; align-items:center; gap:12px; margin-bottom:8px}
-  .brand-badge{height:130px; width:auto; flex-shrink:0; object-fit:contain}
+  .brand-badge{width:130px; height:130px; flex-shrink:0; border-radius:50%; object-fit:cover}
   .brand-text{text-align:center}
   .brand-name{font-family:'Poppins',sans-serif; font-weight:600; line-height:1.15; color:var(--ink); font-size:18px}
   .brand-sub{color:var(--muted); font-size:12.5px}
@@ -220,7 +220,7 @@ const SUPABASE_KEY = "sb_publishable_msOG_LBZ7XNX69w14ksCEQ_sYtmV8yD";
 const TABLE = "giveaway_entries";
 const db = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-const APP_VERSION = "1.4";
+const APP_VERSION = "1.5";
 const $ = (id) => document.getElementById(id);
 let entries = [];
 let listOpen = false;

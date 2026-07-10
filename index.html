@@ -123,7 +123,9 @@
   .draw-caption{font-family:'Poppins',sans-serif; text-transform:uppercase; letter-spacing:.18em;
     font-size:13px; color:var(--gold); margin-bottom:10px}
   .draw-big{font-family:'Poppins',sans-serif; font-weight:700; font-size:clamp(46px,10vw,96px);
-    line-height:1.05; letter-spacing:-.02em; text-shadow:0 10px 40px rgba(0,0,0,.35); word-break:break-word}
+    line-height:1.05; letter-spacing:-.02em; text-shadow:0 10px 40px rgba(0,0,0,.35); word-break:break-word;
+    /* reserve 2 lines so wrapping names don't resize the block and bounce the logo */
+    min-height:2.1em; display:flex; align-items:center; justify-content:center; overflow:hidden}
   .draw-phone{margin-top:10px; font-size:1.1rem; color:rgba(255,255,255,.85); min-height:22px}
   .draw-close{position:absolute; top:16px; right:18px; z-index:3; width:42px; height:42px; border-radius:50%;
     background:rgba(255,255,255,.14); border:1px solid rgba(255,255,255,.3); color:#fff;

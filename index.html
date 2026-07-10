@@ -144,6 +144,7 @@
       <div class="count" id="count">Loading…</div>
       <div id="list"></div>
       <div class="toolbar">
+        <button class="btn btn-ghost" id="seedBtn">Load 20 test names</button>
         <button class="btn btn-ghost" id="resetWinsBtn">Reset winners</button>
         <button class="btn btn-ghost" id="clearBtn">Clear all</button>
       </div>
@@ -151,6 +152,7 @@
   </div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.3/dist/confetti.browser.min.js"></script>
 <script>
 const SUPABASE_URL = "https://xsnjxqruybhxdandcmol.supabase.co";
 const SUPABASE_KEY = "sb_publishable_msOG_LBZ7XNX69w14ksCEQ_sYtmV8yD";
@@ -227,26 +229,73 @@ async function pick() {
   }
   const btn = $("pickBtn");
   btn.disabled = true;
+  setStatus("Drawing…");
   const winnerBox = $("winner");
+  const nameEl = winnerBox.querySelector(".wname");
+  const phoneEl = winnerBox.querySelector(".wphone");
+  winnerBox.querySelector(".label").textContent = "Drawing…";
   winnerBox.classList.add("show");
 
-  let ticks = 18;
+  // ~15s suspense shuffle that starts fast and eases out toward the end.
+  const DURATION = 15000;
+  const start = performance.now();
   await new Promise((resolve) => {
-    const spin = setInterval(() => {
+    function tick() {
+      const elapsed = performance.now() - start;
       const r = pool[Math.floor(Math.random() * pool.length)];
-      winnerBox.querySelector(".wname").textContent = r.name;
-      winnerBox.querySelector(".wphone").textContent = r.phone || "";
-      if (--ticks <= 0) { clearInterval(spin); resolve(); }
-    }, 80);
+      nameEl.textContent = r.name;
+      phoneEl.textContent = r.phone || "";
+      if (elapsed >= DURATION) { resolve(); return; }
+      // ease: 45ms early → ~600ms in the final moments
+      const p = elapsed / DURATION;
+      const delay = 45 + Math.pow(p, 3) * 560;
+      setTimeout(tick, delay);
+    }
+    tick();
   });
 
   const winner = pool[Math.floor(Math.random() * pool.length)];
-  winnerBox.querySelector(".wname").textContent = winner.name;
-  winnerBox.querySelector(".wphone").textContent = winner.phone || "";
+  nameEl.textContent = winner.name;
+  phoneEl.textContent = winner.phone || "";
+  winnerBox.querySelector(".label").textContent = "Winner";
+  celebrate();
 
   await db.from(TABLE).update({ won: true }).eq("id", winner.id);
   btn.disabled = false;
   setStatus("Winner recorded.");
+  await load();
+}
+
+function celebrate() {
+  if (typeof confetti !== "function") return;
+  const colors = ["#2f4a7c", "#5f7244", "#f5b301", "#ffffff", "#1d2f52"];
+  const end = performance.now() + 1500;
+  // opening burst
+  confetti({ particleCount: 140, spread: 90, startVelocity: 45, origin: { y: 0.35 }, colors });
+  // streamers from both bottom corners
+  (function frame() {
+    confetti({ particleCount: 5, angle: 60, spread: 60, origin: { x: 0, y: 0.7 }, colors });
+    confetti({ particleCount: 5, angle: 120, spread: 60, origin: { x: 1, y: 0.7 }, colors });
+    if (performance.now() < end) requestAnimationFrame(frame);
+  })();
+}
+
+async function seed() {
+  const firsts = ["Jordan","Casey","Riley","Taylor","Morgan","Avery","Cameron","Skyler","Devon","Reese",
+    "Hayden","Peyton","Quinn","Rowan","Emerson","Finley","Harper","Kendall","Logan","Marley"];
+  const lasts = ["Bennett","Carter","Diaz","Ellis","Fisher","Grant","Hayes","Irwin","Jensen","Klein",
+    "Lowe","Mora","Nash","Owens","Park","Reyes","Stone","Tran","Vance","Wells"];
+  const shuffled = [...lasts].sort(() => Math.random() - 0.5);
+  const rows = firsts.map((f, i) => {
+    const n = 2000000000 + Math.floor(Math.random() * 7999999999);
+    const s = String(n);
+    return { name: `${f} ${shuffled[i]}`, phone: `(${s.slice(0,3)}) ${s.slice(3,6)}-${s.slice(6,10)}` };
+  });
+  $("seedBtn").disabled = true;
+  const { error } = await db.from(TABLE).insert(rows);
+  $("seedBtn").disabled = false;
+  if (error) { setStatus("Error seeding: " + error.message); return; }
+  setStatus("Added 20 test names.");
   await load();
 }
 
@@ -270,6 +319,7 @@ async function clearAll() {
 
 $("addBtn").onclick = add;
 $("pickBtn").onclick = pick;
+$("seedBtn").onclick = seed;
 $("resetWinsBtn").onclick = resetWins;
 $("clearBtn").onclick = clearAll;
 $("phone").addEventListener("keydown", (e) => { if (e.key === "Enter") add(); });

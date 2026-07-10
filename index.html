@@ -189,7 +189,6 @@
       </button>
       <div id="list" class="collapsed"></div>
       <div class="toolbar">
-        <button class="btn btn-ghost" id="resetWinsBtn">Reset winners</button>
         <button class="btn btn-ghost" id="clearBtn">Clear all</button>
       </div>
     </div>
@@ -220,7 +219,7 @@ const SUPABASE_KEY = "sb_publishable_msOG_LBZ7XNX69w14ksCEQ_sYtmV8yD";
 const TABLE = "giveaway_entries";
 const db = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-const APP_VERSION = "1.6";
+const APP_VERSION = "1.7";
 const $ = (id) => document.getElementById(id);
 let entries = [];
 let listOpen = false;
@@ -439,15 +438,6 @@ function celebrate() {
   })();
 }
 
-async function resetWins() {
-  if (!confirm("Reset all winner flags so everyone is eligible again?")) return;
-  const { error } = await db.from(TABLE).update({ won: false }).neq("id", "00000000-0000-0000-0000-000000000000");
-  if (error) { setStatus("Error: " + error.message); return; }
-  $("winner").classList.remove("show");
-  setStatus("Winners reset.");
-  await load();
-}
-
 async function clearAll() {
   if (!confirm("Delete ALL entries? This cannot be undone.")) return;
   const { error } = await db.from(TABLE).delete().neq("id", "00000000-0000-0000-0000-000000000000");
@@ -464,7 +454,6 @@ $("listToggle").onclick = toggleList;
 $("updateBtn").onclick = forceUpdate;
 $("ver").textContent = "build " + APP_VERSION;
 applyListState();
-$("resetWinsBtn").onclick = resetWins;
 $("clearBtn").onclick = clearAll;
 $("phone").addEventListener("keydown", (e) => { if (e.key === "Enter") add(); });
 $("name").addEventListener("keydown", (e) => { if (e.key === "Enter") $("phone").focus(); });

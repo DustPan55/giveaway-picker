@@ -1,4 +1,4 @@
-const CACHE = "picker-v1";
+const CACHE = "picker-v2";
 const ASSETS = [
   "./", "./index.html", "./manifest.json",
   "./logo-440.webp", "./icon-192.png", "./icon-512.png", "./apple-touch-icon.png"
@@ -22,6 +22,24 @@ self.addEventListener("fetch", (e) => {
   const url = new URL(req.url);
   // Only handle same-origin assets; let Supabase + CDN calls go straight to the network.
   if (url.origin !== location.origin) return;
+
+  const isHTML = req.mode === "navigate" ||
+    (req.headers.get("accept") || "").includes("text/html") ||
+    url.pathname.endsWith("/") || url.pathname.endsWith("index.html");
+
+  if (isHTML) {
+    // Network-first for the page so updates always show; fall back to cache offline.
+    e.respondWith(
+      fetch(req).then((res) => {
+        const copy = res.clone();
+        caches.open(CACHE).then((c) => c.put("./index.html", copy));
+        return res;
+      }).catch(() => caches.match("./index.html").then((r) => r || caches.match("./")))
+    );
+    return;
+  }
+
+  // Cache-first for static assets (icons, logo, manifest).
   e.respondWith(
     caches.match(req).then((cached) =>
       cached ||
@@ -29,7 +47,7 @@ self.addEventListener("fetch", (e) => {
         const copy = res.clone();
         caches.open(CACHE).then((c) => c.put(req, copy));
         return res;
-      }).catch(() => caches.match("./index.html"))
+      })
     )
   );
 });

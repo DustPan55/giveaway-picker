@@ -114,7 +114,7 @@
       </div>
     </div>
 
-    <h1 class="page-title">🎉 Giveaway Picker</h1>
+    <h1 class="page-title">Giveaway Picker</h1>
     <p class="page-lede">Add entries, then draw a random winner</p>
 
     <div id="winner">
@@ -137,7 +137,7 @@
       </div>
     </div>
 
-    <button class="btn btn-pick" id="pickBtn">🎲 &nbsp;Pick a Winner</button>
+    <button class="btn btn-pick" id="pickBtn">Pick a Winner</button>
     <div class="status" id="status"></div>
 
     <div class="card">
@@ -175,7 +175,7 @@ function render() {
     ? `${entries.length} ${entries.length === 1 ? "entry" : "entries"}`
     : "Entries";
   if (!entries.length) {
-    list.innerHTML = '<div class="empty">No entries yet. Add some above 👆</div>';
+    list.innerHTML = '<div class="empty">No entries yet. Add some above.</div>';
     return;
   }
   list.innerHTML = "";
@@ -246,7 +246,7 @@ async function pick() {
 
   await db.from(TABLE).update({ won: true }).eq("id", winner.id);
   btn.disabled = false;
-  setStatus("🎊 Winner recorded!");
+  setStatus("Winner recorded.");
   await load();
 }
 

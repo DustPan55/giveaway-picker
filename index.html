@@ -102,6 +102,30 @@
   .empty{text-align:center; color:var(--muted); padding:34px 16px; font-size:14px}
   .toolbar{display:flex; gap:8px; margin-top:12px}
   .toolbar .btn{flex:1; font-size:13px}
+
+  /* drawing overlay */
+  .draw-overlay{position:fixed; inset:0; z-index:90; display:flex; align-items:center; justify-content:center;
+    text-align:center; color:#fff; overflow:hidden;
+    background:linear-gradient(145deg, rgba(47,74,124,.98), rgba(29,47,82,.98))}
+  .draw-overlay.hidden{display:none}
+  .draw-stage{position:absolute; inset:0; z-index:1; pointer-events:none; overflow:hidden}
+  .float-name{position:absolute; transform:translate(-50%,-50%); white-space:nowrap;
+    font-family:'Poppins',sans-serif; font-weight:600; color:rgba(255,255,255,.5);
+    animation:floatfade 2.4s ease forwards}
+  @keyframes floatfade{
+    0%{opacity:0; transform:translate(-50%,-50%) scale(.85)}
+    20%{opacity:.7} 70%{opacity:.7}
+    100%{opacity:0; transform:translate(-50%,-50%) scale(1.1)}}
+  .draw-center{position:relative; z-index:2; padding:20px; max-width:92vw}
+  .draw-caption{font-family:'Poppins',sans-serif; text-transform:uppercase; letter-spacing:.18em;
+    font-size:13px; color:var(--gold); margin-bottom:10px}
+  .draw-big{font-family:'Poppins',sans-serif; font-weight:700; font-size:clamp(46px,10vw,96px);
+    line-height:1.05; letter-spacing:-.02em; text-shadow:0 10px 40px rgba(0,0,0,.35); word-break:break-word}
+  .draw-phone{margin-top:10px; font-size:1.1rem; color:rgba(255,255,255,.85); min-height:22px}
+  .draw-close{position:absolute; top:16px; right:18px; z-index:3; width:42px; height:42px; border-radius:50%;
+    background:rgba(255,255,255,.14); border:1px solid rgba(255,255,255,.3); color:#fff;
+    font-size:22px; line-height:1; cursor:pointer}
+  .draw-close:hover{background:rgba(255,255,255,.24)}
 </style>
 </head>
 <body>
@@ -137,7 +161,7 @@
       </div>
     </div>
 
-    <button class="btn btn-pick" id="pickBtn">Pick a Winner</button>
+    <button class="btn btn-pick" id="pickBtn">Launch Drawing</button>
     <div class="status" id="status"></div>
 
     <div class="card">
@@ -148,6 +172,17 @@
         <button class="btn btn-ghost" id="resetWinsBtn">Reset winners</button>
         <button class="btn btn-ghost" id="clearBtn">Clear all</button>
       </div>
+    </div>
+  </div>
+
+  <!-- full-screen drawing overlay -->
+  <div id="drawOverlay" class="draw-overlay hidden">
+    <button class="draw-close" id="drawClose" title="Close">&times;</button>
+    <div class="draw-stage" id="drawStage"></div>
+    <div class="draw-center">
+      <div class="draw-caption" id="drawCaption">Get Ready</div>
+      <div class="draw-big" id="drawBig"></div>
+      <div class="draw-phone" id="drawPhone"></div>
     </div>
   </div>
 
@@ -227,47 +262,113 @@ async function remove(id) {
   await load();
 }
 
-async function pick() {
+const COUNTDOWN_SECS = 30;
+const SHUFFLE_SECS = 15;
+let drawAbort = false;
+let drawTimers = [];
+
+function openOverlay() {
+  drawAbort = false;
+  drawTimers = [];
+  $("drawStage").innerHTML = "";
+  $("drawCaption").textContent = "Get Ready";
+  $("drawBig").textContent = "";
+  $("drawPhone").textContent = "";
+  $("pickBtn").disabled = true;
+  $("drawOverlay").classList.remove("hidden");
+}
+
+function closeOverlay() {
+  drawAbort = true;
+  drawTimers.forEach(clearTimeout);
+  drawTimers = [];
+  $("drawStage").innerHTML = "";
+  $("drawOverlay").classList.add("hidden");
+  $("pickBtn").disabled = false;
+}
+
+function spawnFloatName(pool) {
+  const e = pool[Math.floor(Math.random() * pool.length)];
+  const span = document.createElement("span");
+  span.className = "float-name";
+  span.textContent = e.name;
+  span.style.left = (8 + Math.random() * 84) + "%";
+  span.style.top = (14 + Math.random() * 72) + "%";
+  span.style.fontSize = (18 + Math.random() * 30) + "px";
+  $("drawStage").appendChild(span);
+  const id = setTimeout(() => span.remove(), 2400);
+  drawTimers.push(id);
+}
+
+// Phase 1: countdown while names fade in/out at random.
+function countdownPhase(pool) {
+  return new Promise((resolve) => {
+    $("drawCaption").textContent = "Drawing starts in";
+    $("drawPhone").textContent = "";
+    const start = performance.now();
+    let lastShown = null, lastSpawn = 0;
+    function frame(now) {
+      if (drawAbort) return resolve();
+      const elapsed = now - start;
+      const remaining = Math.max(0, Math.ceil((COUNTDOWN_SECS * 1000 - elapsed) / 1000));
+      if (remaining !== lastShown) { $("drawBig").textContent = remaining; lastShown = remaining; }
+      if (now - lastSpawn > 300) { spawnFloatName(pool); lastSpawn = now; }
+      if (elapsed >= COUNTDOWN_SECS * 1000) return resolve();
+      requestAnimationFrame(frame);
+    }
+    requestAnimationFrame(frame);
+  });
+}
+
+// Phase 2: fast shuffle that eases out, returns the chosen winner.
+function shufflePhase(pool) {
+  return new Promise((resolve) => {
+    $("drawStage").innerHTML = "";
+    $("drawCaption").textContent = "Drawing…";
+    const DURATION = SHUFFLE_SECS * 1000;
+    const start = performance.now();
+    function tick() {
+      if (drawAbort) return resolve(null);
+      const elapsed = performance.now() - start;
+      const r = pool[Math.floor(Math.random() * pool.length)];
+      $("drawBig").textContent = r.name;
+      $("drawPhone").textContent = maskPhone(r.phone);
+      if (elapsed >= DURATION) return resolve(pool[Math.floor(Math.random() * pool.length)]);
+      const p = elapsed / DURATION;
+      const delay = 45 + Math.pow(p, 3) * 560; // 45ms early → ~600ms at the end
+      const id = setTimeout(tick, delay);
+      drawTimers.push(id);
+    }
+    tick();
+  });
+}
+
+async function launchDraw() {
   const pool = entries.filter((e) => !e.won);
   if (!pool.length) {
     setStatus(entries.length ? "Everyone has already won. Reset winners to draw again." : "Add some entries first.");
     return;
   }
-  const btn = $("pickBtn");
-  btn.disabled = true;
-  setStatus("Drawing…");
-  const winnerBox = $("winner");
-  const nameEl = winnerBox.querySelector(".wname");
-  const phoneEl = winnerBox.querySelector(".wphone");
-  winnerBox.querySelector(".label").textContent = "Drawing…";
-  winnerBox.classList.add("show");
+  openOverlay();
+  await countdownPhase(pool);
+  if (drawAbort) return;
+  const winner = await shufflePhase(pool);
+  if (drawAbort || !winner) return;
 
-  // ~15s suspense shuffle that starts fast and eases out toward the end.
-  const DURATION = 15000;
-  const start = performance.now();
-  await new Promise((resolve) => {
-    function tick() {
-      const elapsed = performance.now() - start;
-      const r = pool[Math.floor(Math.random() * pool.length)];
-      nameEl.textContent = r.name;
-      phoneEl.textContent = maskPhone(r.phone);
-      if (elapsed >= DURATION) { resolve(); return; }
-      // ease: 45ms early → ~600ms in the final moments
-      const p = elapsed / DURATION;
-      const delay = 45 + Math.pow(p, 3) * 560;
-      setTimeout(tick, delay);
-    }
-    tick();
-  });
-
-  const winner = pool[Math.floor(Math.random() * pool.length)];
-  nameEl.textContent = winner.name;
-  phoneEl.textContent = maskPhone(winner.phone);
-  winnerBox.querySelector(".label").textContent = "Winner";
+  // reveal
+  $("drawCaption").textContent = "Winner";
+  $("drawBig").textContent = winner.name;
+  $("drawPhone").textContent = maskPhone(winner.phone);
   celebrate();
 
   await db.from(TABLE).update({ won: true }).eq("id", winner.id);
-  btn.disabled = false;
+
+  // reflect on the page behind the overlay
+  const winnerBox = $("winner");
+  winnerBox.querySelector(".label").textContent = "Winner";
+  winnerBox.querySelector(".wname").textContent = winner.name;
+  winnerBox.querySelector(".wphone").textContent = maskPhone(winner.phone);
+  winnerBox.classList.add("show");
   setStatus("Winner recorded.");
   await load();
 }
@@ -324,8 +425,9 @@ async function clearAll() {
 }
 
 $("addBtn").onclick = add;
-$("pickBtn").onclick = pick;
+$("pickBtn").onclick = launchDraw;
 $("seedBtn").onclick = seed;
+$("drawClose").onclick = closeOverlay;
 $("resetWinsBtn").onclick = resetWins;
 $("clearBtn").onclick = clearAll;
 $("phone").addEventListener("keydown", (e) => { if (e.key === "Enter") add(); });

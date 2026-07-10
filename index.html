@@ -189,12 +189,18 @@ function render() {
       <div class="li-ic${e.won ? " ok" : ""}">${initial}</div>
       <div class="li-main">
         <div class="li-title">${escapeHtml(e.name)}${e.won ? '<span class="badge">WON</span>' : ""}</div>
-        ${e.phone ? `<div class="li-sub">${escapeHtml(e.phone)}</div>` : ""}
+        ${e.phone ? `<div class="li-sub">${escapeHtml(maskPhone(e.phone))}</div>` : ""}
       </div>
       <button class="del" title="Remove">&times;</button>`;
     div.querySelector(".del").onclick = () => remove(e.id);
     list.appendChild(div);
   });
+}
+
+// Mask digits for on-screen privacy (safe to screen-record). Real value stays in the DB.
+function maskPhone(p) {
+  if (!p) return "";
+  return String(p).replace(/\d/g, "•");
 }
 
 function escapeHtml(s) {
@@ -244,7 +250,7 @@ async function pick() {
       const elapsed = performance.now() - start;
       const r = pool[Math.floor(Math.random() * pool.length)];
       nameEl.textContent = r.name;
-      phoneEl.textContent = r.phone || "";
+      phoneEl.textContent = maskPhone(r.phone);
       if (elapsed >= DURATION) { resolve(); return; }
       // ease: 45ms early → ~600ms in the final moments
       const p = elapsed / DURATION;
@@ -256,7 +262,7 @@ async function pick() {
 
   const winner = pool[Math.floor(Math.random() * pool.length)];
   nameEl.textContent = winner.name;
-  phoneEl.textContent = winner.phone || "";
+  phoneEl.textContent = maskPhone(winner.phone);
   winnerBox.querySelector(".label").textContent = "Winner";
   celebrate();
 

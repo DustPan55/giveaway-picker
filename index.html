@@ -219,7 +219,7 @@ const SUPABASE_KEY = "sb_publishable_msOG_LBZ7XNX69w14ksCEQ_sYtmV8yD";
 const TABLE = "giveaway_entries";
 const db = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-const APP_VERSION = "1.7";
+const APP_VERSION = "1.8";
 const $ = (id) => document.getElementById(id);
 let entries = [];
 let listOpen = false;
@@ -398,7 +398,7 @@ function shufflePhase(pool) {
 async function launchDraw() {
   const pool = entries.filter((e) => !e.won);
   if (!pool.length) {
-    setStatus(entries.length ? "Everyone has already won. Reset winners to draw again." : "Add some entries first.");
+    setStatus(entries.length ? "Everyone has already won. Tap Clear all to start over." : "Add some entries first.");
     return;
   }
   openOverlay();

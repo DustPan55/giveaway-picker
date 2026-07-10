@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Giveaway Picker</title>
+<style>
+  :root {
+    --bg: #0f172a;
+    --card: #1e293b;
+    --accent: #f43f5e;
+    --accent2: #8b5cf6;
+    --text: #f1f5f9;
+    --muted: #94a3b8;
+    --line: #334155;
+    --green: #22c55e;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    background: linear-gradient(160deg, #0f172a, #1e1b4b);
+    color: var(--text);
+    min-height: 100vh;
+    padding: 24px 16px 60px;
+  }
+  .wrap { max-width: 640px; margin: 0 auto; }
+  h1 {
+    text-align: center;
+    font-size: 2rem;
+    margin: 8px 0 4px;
+    background: linear-gradient(90deg, var(--accent), var(--accent2));
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+  .sub { text-align: center; color: var(--muted); margin: 0 0 24px; font-size: .95rem; }
+  .card {
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: 16px;
+    padding: 20px;
+    margin-bottom: 20px;
+    box-shadow: 0 10px 30px rgba(0,0,0,.3);
+  }
+  label { display: block; font-size: .8rem; color: var(--muted); margin: 0 0 4px; }
+  input {
+    width: 100%;
+    padding: 12px 14px;
+    border-radius: 10px;
+    border: 1px solid var(--line);
+    background: #0f172a;
+    color: var(--text);
+    font-size: 1rem;
+    margin-bottom: 12px;
+  }
+  input:focus { outline: none; border-color: var(--accent2); }
+  button {
+    cursor: pointer;
+    border: none;
+    border-radius: 10px;
+    font-size: 1rem;
+    font-weight: 600;
+    padding: 12px 16px;
+    color: white;
+    transition: transform .05s ease, opacity .2s ease;
+  }
+  button:active { transform: scale(.97); }
+  button:disabled { opacity: .5; cursor: not-allowed; }
+  .btn-add { background: var(--accent2); width: 100%; }
+  .btn-pick {
+    background: linear-gradient(90deg, var(--accent), var(--accent2));
+    width: 100%;
+    font-size: 1.15rem;
+    padding: 16px;
+  }
+  .row { display: flex; gap: 8px; }
+  .row input { flex: 1; }
+  .entry {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 12px;
+    border-radius: 10px;
+    background: #0f172a;
+    margin-bottom: 8px;
+    border: 1px solid var(--line);
+  }
+  .entry.winner { border-color: var(--green); box-shadow: 0 0 0 1px var(--green); }
+  .entry .info { overflow: hidden; }
+  .entry .name { font-weight: 600; }
+  .entry .phone { color: var(--muted); font-size: .85rem; }
+  .entry .badge {
+    font-size: .7rem; color: var(--green); border: 1px solid var(--green);
+    border-radius: 999px; padding: 2px 8px; margin-left: 8px; white-space: nowrap;
+  }
+  .del {
+    background: none; color: var(--muted); font-size: 1.2rem; padding: 4px 8px;
+    line-height: 1;
+  }
+  .del:hover { color: var(--accent); }
+  .count { text-align: center; color: var(--muted); font-size: .85rem; margin-bottom: 12px; }
+  #winner {
+    text-align: center;
+    padding: 24px;
+    border-radius: 16px;
+    background: linear-gradient(135deg, rgba(244,63,94,.15), rgba(139,92,246,.15));
+    border: 1px solid var(--accent);
+    display: none;
+    margin-bottom: 20px;
+  }
+  #winner.show { display: block; animation: pop .4s ease; }
+  @keyframes pop { 0% { transform: scale(.8); opacity: 0; } 100% { transform: scale(1); opacity: 1; } }
+  #winner .label { color: var(--muted); font-size: .85rem; letter-spacing: 2px; text-transform: uppercase; }
+  #winner .wname { font-size: 2rem; font-weight: 800; margin: 8px 0 4px; }
+  #winner .wphone { color: var(--text); font-size: 1.1rem; }
+  .toolbar { display: flex; gap: 8px; justify-content: center; margin-top: 12px; flex-wrap: wrap; }
+  .toolbar button { background: transparent; border: 1px solid var(--line); color: var(--muted); font-weight: 500; font-size: .85rem; }
+  .status { text-align: center; color: var(--muted); font-size: .8rem; min-height: 18px; }
+  .empty { text-align: center; color: var(--muted); padding: 20px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>🎉 Giveaway Picker</h1>
+  <p class="sub">Add entries, then draw a random winner.</p>
+
+  <div id="winner">
+    <div class="label">Winner</div>
+    <div class="wname">—</div>
+    <div class="wphone"></div>
+  </div>
+
+  <div class="card">
+    <label>Name</label>
+    <input id="name" placeholder="Jane Doe" autocomplete="off" />
+    <label>Phone number</label>
+    <div class="row">
+      <input id="phone" placeholder="(555) 123-4567" autocomplete="off" inputmode="tel" />
+      <button class="btn-add" id="addBtn" style="width:auto;padding:12px 20px">Add</button>
+    </div>
+  </div>
+
+  <button class="btn-pick" id="pickBtn">🎲 Pick a Winner</button>
+  <div class="status" id="status"></div>
+
+  <div class="card">
+    <div class="count" id="count">Loading…</div>
+    <div id="list"></div>
+    <div class="toolbar">
+      <button id="resetWinsBtn">Reset winners</button>
+      <button id="clearBtn">Clear all</button>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+const SUPABASE_URL = "https://xsnjxqruybhxdandcmol.supabase.co";
+const SUPABASE_KEY = "sb_publishable_msOG_LBZ7XNX69w14ksCEQ_sYtmV8yD";
+const TABLE = "giveaway_entries";
+const db = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+const $ = (id) => document.getElementById(id);
+let entries = [];
+
+function setStatus(msg) { $("status").textContent = msg || ""; }
+
+async function load() {
+  const { data, error } = await db.from(TABLE).select("*").order("created_at", { ascending: true });
+  if (error) { setStatus("Error loading: " + error.message); return; }
+  entries = data || [];
+  render();
+}
+
+function render() {
+  const list = $("list");
+  $("count").textContent = entries.length
+    ? `${entries.length} ${entries.length === 1 ? "entry" : "entries"}`
+    : "";
+  if (!entries.length) {
+    list.innerHTML = '<div class="empty">No entries yet. Add some above 👆</div>';
+    return;
+  }
+  list.innerHTML = "";
+  entries.forEach((e) => {
+    const div = document.createElement("div");
+    div.className = "entry" + (e.won ? " winner" : "");
+    div.innerHTML = `
+      <div class="info">
+        <span class="name">${escapeHtml(e.name)}</span>
+        ${e.won ? '<span class="badge">WON</span>' : ""}
+        <div class="phone">${escapeHtml(e.phone || "")}</div>
+      </div>
+      <button class="del" title="Remove">&times;</button>`;
+    div.querySelector(".del").onclick = () => remove(e.id);
+    list.appendChild(div);
+  });
+}
+
+function escapeHtml(s) {
+  return String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+}
+
+async function add() {
+  const name = $("name").value.trim();
+  const phone = $("phone").value.trim();
+  if (!name) { setStatus("Enter a name first."); $("name").focus(); return; }
+  $("addBtn").disabled = true;
+  const { error } = await db.from(TABLE).insert({ name, phone: phone || null });
+  $("addBtn").disabled = false;
+  if (error) { setStatus("Error adding: " + error.message); return; }
+  $("name").value = ""; $("phone").value = "";
+  $("name").focus();
+  setStatus("");
+  await load();
+}
+
+async function remove(id) {
+  const { error } = await db.from(TABLE).delete().eq("id", id);
+  if (error) { setStatus("Error removing: " + error.message); return; }
+  await load();
+}
+
+async function pick() {
+  const pool = entries.filter((e) => !e.won);
+  if (!pool.length) {
+    setStatus(entries.length ? "Everyone has already won. Reset winners to draw again." : "Add some entries first.");
+    return;
+  }
+  const btn = $("pickBtn");
+  btn.disabled = true;
+  const winnerBox = $("winner");
+  winnerBox.classList.add("show");
+
+  // Suspense shuffle animation
+  let ticks = 18;
+  await new Promise((resolve) => {
+    const spin = setInterval(() => {
+      const r = pool[Math.floor(Math.random() * pool.length)];
+      winnerBox.querySelector(".wname").textContent = r.name;
+      winnerBox.querySelector(".wphone").textContent = r.phone || "";
+      if (--ticks <= 0) { clearInterval(spin); resolve(); }
+    }, 80);
+  });
+
+  const winner = pool[Math.floor(Math.random() * pool.length)];
+  winnerBox.querySelector(".wname").textContent = winner.name;
+  winnerBox.querySelector(".wphone").textContent = winner.phone || "";
+
+  await db.from(TABLE).update({ won: true }).eq("id", winner.id);
+  btn.disabled = false;
+  setStatus("🎊 Winner recorded!");
+  await load();
+}
+
+async function resetWins() {
+  if (!confirm("Reset all winner flags so everyone is eligible again?")) return;
+  const { error } = await db.from(TABLE).update({ won: false }).neq("id", "00000000-0000-0000-0000-000000000000");
+  if (error) { setStatus("Error: " + error.message); return; }
+  $("winner").classList.remove("show");
+  setStatus("Winners reset.");
+  await load();
+}
+
+async function clearAll() {
+  if (!confirm("Delete ALL entries? This cannot be undone.")) return;
+  const { error } = await db.from(TABLE).delete().neq("id", "00000000-0000-0000-0000-000000000000");
+  if (error) { setStatus("Error: " + error.message); return; }
+  $("winner").classList.remove("show");
+  setStatus("All entries cleared.");
+  await load();
+}
+
+$("addBtn").onclick = add;
+$("pickBtn").onclick = pick;
+$("resetWinsBtn").onclick = resetWins;
+$("clearBtn").onclick = clearAll;
+$("phone").addEventListener("keydown", (e) => { if (e.key === "Enter") add(); });
+$("name").addEventListener("keydown", (e) => { if (e.key === "Enter") $("phone").focus(); });
+
+load();
+</script>
+</body>
+</html>

@@ -117,8 +117,9 @@
     20%{opacity:.7} 70%{opacity:.7}
     100%{opacity:0; transform:translate(-50%,-50%) scale(1.1)}}
   .draw-center{position:relative; z-index:2; padding:20px; max-width:92vw}
-  .draw-logo{display:block; height:96px; width:auto; margin:0 auto 18px; object-fit:contain;
-    filter:drop-shadow(0 8px 22px rgba(0,0,0,.35))}
+  .draw-logo{display:block; width:104px; height:104px; margin:0 auto 18px; border-radius:50%;
+    object-fit:cover; border:3px solid rgba(255,255,255,.85);
+    box-shadow:0 8px 22px rgba(0,0,0,.35)}
   .draw-caption{font-family:'Poppins',sans-serif; text-transform:uppercase; letter-spacing:.18em;
     font-size:13px; color:var(--gold); margin-bottom:10px}
   .draw-big{font-family:'Poppins',sans-serif; font-weight:700; font-size:clamp(46px,10vw,96px);
@@ -295,8 +296,10 @@ function spawnFloatName(pool) {
   const span = document.createElement("span");
   span.className = "float-name";
   span.textContent = e.name;
-  span.style.left = (8 + Math.random() * 84) + "%";
-  span.style.top = (14 + Math.random() * 72) + "%";
+  // Keep names in the left/right side columns so they never cross the centered logo + countdown.
+  const onLeft = Math.random() < 0.5;
+  span.style.left = (onLeft ? 3 + Math.random() * 21 : 76 + Math.random() * 21) + "%";
+  span.style.top = (8 + Math.random() * 84) + "%";
   span.style.fontSize = (18 + Math.random() * 30) + "px";
   $("drawStage").appendChild(span);
   const id = setTimeout(() => span.remove(), 2400);

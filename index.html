@@ -89,7 +89,12 @@
 
   /* list */
   .count{font-family:'Poppins',sans-serif; font-size:12px; font-weight:600; text-transform:uppercase;
-    letter-spacing:.05em; color:var(--muted); margin:0 2px 12px}
+    letter-spacing:.05em; color:var(--muted); margin:0; padding:2px; width:100%;
+    display:flex; align-items:center; justify-content:space-between;
+    background:none; border:none; cursor:pointer}
+  .count .caret{font-size:11px; transition:transform .15s ease}
+  #list{margin-top:12px}
+  #list.collapsed{display:none}
   .list-item{background:var(--card); border:1px solid var(--line); border-radius:14px;
     padding:11px 13px; margin-bottom:9px; box-shadow:var(--shadow-sm); display:flex; gap:11px; align-items:center}
   .list-item.winner{border-color:var(--green); box-shadow:0 0 0 1px var(--green)}
@@ -175,8 +180,11 @@
     <div class="status" id="status"></div>
 
     <div class="card">
-      <div class="count" id="count">Loading…</div>
-      <div id="list"></div>
+      <button class="count" id="listToggle" aria-expanded="false">
+        <span id="count">Loading…</span>
+        <span class="caret" id="caret">▸</span>
+      </button>
+      <div id="list" class="collapsed"></div>
       <div class="toolbar">
         <button class="btn btn-ghost" id="seedBtn">Load 20 test names</button>
         <button class="btn btn-ghost" id="resetWinsBtn">Reset winners</button>
@@ -207,6 +215,14 @@ const db = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
 const $ = (id) => document.getElementById(id);
 let entries = [];
+let listOpen = false;
+
+function applyListState() {
+  $("list").classList.toggle("collapsed", !listOpen);
+  $("listToggle").setAttribute("aria-expanded", String(listOpen));
+  $("caret").textContent = listOpen ? "▾" : "▸";
+}
+function toggleList() { listOpen = !listOpen; applyListState(); render(); }
 
 function setStatus(msg) { $("status").textContent = msg || ""; }
 
@@ -220,7 +236,7 @@ async function load() {
 function render() {
   const list = $("list");
   $("count").textContent = entries.length
-    ? `${entries.length} ${entries.length === 1 ? "entry" : "entries"}`
+    ? `${entries.length} ${entries.length === 1 ? "entry" : "entries"} · ${listOpen ? "hide" : "show"}`
     : "Entries";
   if (!entries.length) {
     list.innerHTML = '<div class="empty">No entries yet. Add some above.</div>';
@@ -234,8 +250,7 @@ function render() {
     div.innerHTML = `
       <div class="li-ic${e.won ? " ok" : ""}">${initial}</div>
       <div class="li-main">
-        <div class="li-title">${escapeHtml(e.name)}${e.won ? '<span class="badge">WON</span>' : ""}</div>
-        ${e.phone ? `<div class="li-sub">${escapeHtml(maskPhone(e.phone))}</div>` : ""}
+        <div class="li-title">${escapeHtml(displayName(e.name))}${e.won ? '<span class="badge">WON</span>' : ""}</div>
       </div>
       <button class="del" title="Remove">&times;</button>`;
     div.querySelector(".del").onclick = () => remove(e.id);
@@ -243,10 +258,11 @@ function render() {
   });
 }
 
-// Mask digits for on-screen privacy (safe to screen-record). Real value stays in the DB.
-function maskPhone(p) {
-  if (!p) return "";
-  return String(p).replace(/\d/g, "•");
+// Show first name + last initial for privacy (e.g. "Jordan Bennett" -> "Jordan B.").
+function displayName(name) {
+  const parts = String(name || "").trim().split(/\s+/).filter(Boolean);
+  if (parts.length <= 1) return parts[0] || "";
+  return parts[0] + " " + parts[parts.length - 1].charAt(0).toUpperCase() + ".";
 }
 
 function escapeHtml(s) {
@@ -302,7 +318,7 @@ function spawnFloatName(pool) {
   const e = pool[Math.floor(Math.random() * pool.length)];
   const span = document.createElement("span");
   span.className = "float-name";
-  span.textContent = e.name;
+  span.textContent = displayName(e.name);
   // Keep names in the left/right side columns so they never cross the centered logo + countdown.
   const onLeft = Math.random() < 0.5;
   span.style.left = (onLeft ? 3 + Math.random() * 21 : 76 + Math.random() * 21) + "%";
@@ -344,8 +360,7 @@ function shufflePhase(pool) {
       if (drawAbort) return resolve(null);
       const elapsed = performance.now() - start;
       const r = pool[Math.floor(Math.random() * pool.length)];
-      $("drawBig").textContent = r.name;
-      $("drawPhone").textContent = maskPhone(r.phone);
+      $("drawBig").textContent = displayName(r.name);
       if (elapsed >= DURATION) return resolve(pool[Math.floor(Math.random() * pool.length)]);
       const p = elapsed / DURATION;
       const delay = 45 + Math.pow(p, 3) * 560; // 45ms early → ~600ms at the end
@@ -370,8 +385,7 @@ async function launchDraw() {
 
   // reveal
   $("drawCaption").textContent = "Winner";
-  $("drawBig").textContent = winner.name;
-  $("drawPhone").textContent = maskPhone(winner.phone);
+  $("drawBig").textContent = displayName(winner.name);
   celebrate();
 
   await db.from(TABLE).update({ won: true }).eq("id", winner.id);
@@ -379,8 +393,8 @@ async function launchDraw() {
   // reflect on the page behind the overlay
   const winnerBox = $("winner");
   winnerBox.querySelector(".label").textContent = "Winner";
-  winnerBox.querySelector(".wname").textContent = winner.name;
-  winnerBox.querySelector(".wphone").textContent = maskPhone(winner.phone);
+  winnerBox.querySelector(".wname").textContent = displayName(winner.name);
+  winnerBox.querySelector(".wphone").textContent = "";
   winnerBox.classList.add("show");
   setStatus("Winner recorded.");
   await load();
@@ -441,6 +455,8 @@ $("addBtn").onclick = add;
 $("pickBtn").onclick = launchDraw;
 $("seedBtn").onclick = seed;
 $("drawClose").onclick = closeOverlay;
+$("listToggle").onclick = toggleList;
+applyListState();
 $("resetWinsBtn").onclick = resetWins;
 $("clearBtn").onclick = clearAll;
 $("phone").addEventListener("keydown", (e) => { if (e.key === "Enter") add(); });
